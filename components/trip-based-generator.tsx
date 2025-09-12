@@ -1,90 +1,260 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Trip, MasterList, PackingItem, HeuristicConfig, DEFAULT_HEURISTICS } from '@/lib/types'
+import { Trip, MasterList, PackingItem, HeuristicConfig, DEFAULT_HEURISTICS, TripSuggestion } from '@/lib/types'
 import { PackingHeuristics } from '@/lib/heuristics'
-import { CalendarDays, MapPin, Luggage, Star, Settings, Wand2, Info, CheckCircle, AlertCircle } from 'lucide-react'
+import { TripStorage } from '@/lib/trip-storage'
+import { CalendarDays, MapPin, Luggage, Star, Settings, Wand2, Info, CheckCircle, AlertCircle, Plus } from 'lucide-react'
 import CreateTripDialog from './create-trip-dialog'
 import HeuristicsSettingsDialog from './heuristics-settings-dialog'
 import { PackingListGenerator } from './packing-list/packing-list-generator'
+import { SuggestionsPanel } from './suggestions-panel'
+import { useToast } from '@/components/ui/use-toast'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface TripBasedGeneratorProps {
-  masterList: MasterList
-  onBackToLibrary: () => void
+  masterList?: MasterList
+  onBackToLibrary?: () => void
+  trip?: Trip
 }
 
-export function TripBasedGenerator({ masterList, onBackToLibrary }: TripBasedGeneratorProps) {
-  const [trip, setTrip] = useState<Trip | null>(null)
+export function TripBasedGenerator({ masterList, onBackToLibrary, trip: propTrip }: TripBasedGeneratorProps) {
+  const [trip, setTrip] = useState<Trip | null>(propTrip || null)
   const [showTripDialog, setShowTripDialog] = useState(false)
   const [showHeuristicsDialog, setShowHeuristicsDialog] = useState(false)
   const [heuristicsConfig, setHeuristicsConfig] = useState<HeuristicConfig>(DEFAULT_HEURISTICS)
-  const [packingItems, setPackingItems] = useState<PackingItem[]>([])
-  const [heuristicsApplied, setHeuristicsApplied] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(true)
+  const [showAddItem, setShowAddItem] = useState(false)
+  const [newItemForm, setNewItemForm] = useState({
+    name: '',
+    category: 'misc',
+    quantity: 1,
+    essential: false
+  })
+  const { toast } = useToast()
 
   const heuristics = useMemo(() => new PackingHeuristics(heuristicsConfig), [heuristicsConfig])
 
+  // Load active trip on mount or use prop trip
+  useEffect(() => {
+    if (propTrip) {
+      setTrip(propTrip)
+      if (propTrip.heuristicsConfig) {
+        setHeuristicsConfig(propTrip.heuristicsConfig)
+      }
+    } else if (masterList) {
+      const activeTrip = TripStorage.getActiveTrip()
+      if (activeTrip && activeTrip.masterListId === masterList.id) {
+        setTrip(activeTrip)
+        if (activeTrip.heuristicsConfig) {
+          setHeuristicsConfig(activeTrip.heuristicsConfig)
+        }
+      }
+    }
+  }, [propTrip, masterList])
+
   const handleTripCreated = (tripData: Trip) => {
-    setTrip(tripData)
-    setShowTripDialog(false)
+    if (!masterList) return
     
-    // Initialize packing items from master list
-    const initialItems = masterList.items.map(item => ({ ...item, packed: false, pinned: false }))
-    setPackingItems(initialItems)
-    setHeuristicsApplied(false)
+    // Initialize trip with master list items and generate suggestions
+    const initialItems = masterList.items.map(item => ({ 
+      ...item, 
+      id: `item-${Date.now()}-${Math.random()}`,
+      packed: false, 
+      pinned: false 
+    }))
+    
+    // Apply heuristics to calculate quantities
+    const updatedItems = heuristics.applyHeuristicsToItems(tripData, initialItems)
+    
+    // Generate additional suggestions
+    const additionalItems = heuristics.generateSuggestions(tripData)
+    const existingNames = new Set(updatedItems.map(item => item.name.toLowerCase()))
+    const newItems = additionalItems.filter(
+      item => !existingNames.has(item.name.toLowerCase())
+    )
+    
+    // Create suggestions for new items
+    const suggestions: TripSuggestion[] = newItems.map(item => ({
+      id: `suggestion-${Date.now()}-${Math.random()}`,
+      type: 'add',
+      item,
+      reason: `Recommended for ${tripData.days}-day ${tripData.destinationType} trip`,
+      category: item.category,
+      applied: false
+    }))
+    
+    // Look for quantity changes as suggestions
+    initialItems.forEach((originalItem, index) => {
+      const updatedItem = updatedItems[index]
+      if (updatedItem && originalItem.quantity !== updatedItem.quantity) {
+        suggestions.push({
+          id: `suggestion-${Date.now()}-${Math.random()}`,
+          type: 'update',
+          targetItemId: updatedItem.id,
+          item: { ...updatedItem },
+          reason: heuristics.getHeuristicExplanation(tripData, updatedItem),
+          category: updatedItem.category,
+          applied: false
+        })
+      }
+    })
+    
+    const newTrip: Trip = {
+      ...tripData,
+      masterListId: masterList?.id || trip?.masterListId || '',
+      checklistItems: updatedItems,
+      suggestions,
+      heuristicsConfig,
+      id: `trip-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    
+    // Save trip and set as active
+    TripStorage.saveTrip(newTrip)
+    TripStorage.setActiveTrip(newTrip.id)
+    
+    setTrip(newTrip)
+    setShowTripDialog(false)
+    setShowSuggestions(true)
+    
+    toast({
+      title: "Trip created successfully",
+      description: `${newTrip.name} has been created with smart suggestions`
+    })
   }
 
-  const applyHeuristics = () => {
+  const handleApplySuggestions = (suggestionIds: string[]) => {
     if (!trip) return
-
-    try {
-      // Apply heuristics to existing items and add trip-specific suggestions
-      const updatedItems = heuristics.applyHeuristicsToItems(trip, packingItems)
-      const tripSuggestions = heuristics.generateSuggestions(trip)
-      
-      // Merge suggestions with existing items (avoid duplicates)
-      const existingNames = new Set(updatedItems.map(item => item.name.toLowerCase()))
-      const newSuggestions = tripSuggestions.filter(
-        suggestion => !existingNames.has(suggestion.name.toLowerCase())
+    
+    TripStorage.applySuggestions(trip.id, suggestionIds)
+    const updatedTrip = TripStorage.getTrip(trip.id)
+    if (updatedTrip) {
+      setTrip(updatedTrip)
+    }
+    
+    toast({
+      title: "Suggestions applied",
+      description: (
+        <div className="flex items-center gap-2">
+          <span>{suggestionIds.length} suggestions have been applied to your packing list</span>
+          <Button
+            variant="link"
+            size="sm"
+            className="p-0 h-auto"
+            onClick={() => {
+              // Scroll to packing list
+              const packingListElement = document.getElementById('packing-list')
+              packingListElement?.scrollIntoView({ behavior: 'smooth' })
+            }}
+          >
+            View updated packing list
+          </Button>
+        </div>
+      ),
+      action: (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            // Implement undo functionality
+            toast({
+              title: "Undo not yet implemented",
+              description: "This feature is coming soon"
+            })
+          }}
+        >
+          Undo
+        </Button>
       )
-      
-      const finalItems = [...updatedItems, ...newSuggestions].filter(item => {
-        // Ensure all items have valid quantities
-        return item.quantity && item.quantity > 0 && item.name && item.name.trim() !== ''
-      })
-      
-      setPackingItems(finalItems)
-      setHeuristicsApplied(true)
-    } catch (error) {
-      console.error('Error applying heuristics:', error)
-      // Fallback: just update quantities of existing items
-      const updatedItems = packingItems.map(item => ({
-        ...item,
-        quantity: Math.max(1, item.quantity || 1)
-      }))
-      setPackingItems(updatedItems)
-      setHeuristicsApplied(true)
+    })
+  }
+
+  const handleDismissSuggestion = (suggestionId: string) => {
+    if (!trip) return
+    
+    TripStorage.dismissSuggestion(trip.id, suggestionId)
+    const updatedTrip = TripStorage.getTrip(trip.id)
+    if (updatedTrip) {
+      setTrip(updatedTrip)
+    }
+  }
+
+  const handleAddItem = () => {
+    if (!trip || !newItemForm.name.trim()) return
+    
+    const newItem: PackingItem = {
+      id: `item-${Date.now()}-${Math.random()}`,
+      name: newItemForm.name,
+      category: newItemForm.category,
+      quantity: newItemForm.quantity,
+      essential: newItemForm.essential,
+      packed: false
+    }
+    
+    TripStorage.addItemToTrip(trip.id, newItem)
+    const updatedTrip = TripStorage.getTrip(trip.id)
+    if (updatedTrip) {
+      setTrip(updatedTrip)
+    }
+    
+    // Reset form
+    setNewItemForm({
+      name: '',
+      category: 'misc',
+      quantity: 1,
+      essential: false
+    })
+    setShowAddItem(false)
+    
+    toast({
+      title: "Item added",
+      description: `${newItem.name} has been added to your packing list`
+    })
+  }
+
+  const handleItemUpdate = (itemId: string, updates: Partial<PackingItem>) => {
+    if (!trip) return
+    
+    TripStorage.updateTripItem(trip.id, itemId, updates)
+    const updatedTrip = TripStorage.getTrip(trip.id)
+    if (updatedTrip) {
+      setTrip(updatedTrip)
+    }
+  }
+
+  const handleItemDelete = (itemId: string) => {
+    if (!trip) return
+    
+    TripStorage.deleteTripItem(trip.id, itemId)
+    const updatedTrip = TripStorage.getTrip(trip.id)
+    if (updatedTrip) {
+      setTrip(updatedTrip)
     }
   }
 
   const stats = useMemo(() => {
     if (!trip) return null
     
-    const totalItems = packingItems.length
-    const heuristicItems = packingItems.filter(item => 
-      heuristics.calculateQuantityForItem(trip, item) !== (item.quantity || 1)
-    ).length
+    const totalItems = trip.checklistItems.length
+    const packedItems = trip.checklistItems.filter(item => item.packed).length
+    const activeSuggestions = trip.suggestions?.filter(s => !s.applied && !s.dismissedAt).length || 0
     
     return {
       totalItems,
-      heuristicItems,
+      packedItems,
       tripDays: trip.days,
-      activities: trip.activities.length
+      activities: trip.activities.length,
+      activeSuggestions
     }
-  }, [trip, packingItems, heuristics])
+  }, [trip])
 
   if (!trip) {
     return (
@@ -94,7 +264,7 @@ export function TripBasedGenerator({ masterList, onBackToLibrary }: TripBasedGen
             <div>
               <h2 className="text-2xl font-bold">Trip-Based Packing Generator</h2>
               <p className="text-muted-foreground">
-                Create a trip to generate smart packing suggestions from {masterList.name}
+                Create a trip to generate smart packing suggestions{masterList?.name ? ` from ${masterList.name}` : ''}
               </p>
             </div>
             <Button variant="outline" onClick={onBackToLibrary}>
@@ -170,7 +340,10 @@ export function TripBasedGenerator({ masterList, onBackToLibrary }: TripBasedGen
             <Button variant="outline" size="sm" onClick={onBackToLibrary}>
               Back to Library
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setTrip(null)}>
+            <Button variant="outline" size="sm" onClick={() => {
+              TripStorage.clearActiveTrip()
+              setTrip(null)
+            }}>
               Change Trip
             </Button>
           </div>
@@ -182,6 +355,14 @@ export function TripBasedGenerator({ masterList, onBackToLibrary }: TripBasedGen
         
         <div className="flex items-center gap-2">
           <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAddItem(!showAddItem)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Item
+          </Button>
+          <Button
             variant="outline" 
             size="sm"
             onClick={() => setShowHeuristicsDialog(true)}
@@ -191,6 +372,73 @@ export function TripBasedGenerator({ masterList, onBackToLibrary }: TripBasedGen
           </Button>
         </div>
       </div>
+
+      {/* Add Item Form */}
+      {showAddItem && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Add Item to Packing List</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="item-name">Item Name</Label>
+                <Input
+                  id="item-name"
+                  placeholder="e.g., Rain jacket"
+                  value={newItemForm.name}
+                  onChange={(e) => setNewItemForm(prev => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="item-category">Category</Label>
+                <Select
+                  value={newItemForm.category}
+                  onValueChange={(value) => setNewItemForm(prev => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger id="item-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tops">Tops</SelectItem>
+                    <SelectItem value="bottoms">Bottoms</SelectItem>
+                    <SelectItem value="underwear">Underwear</SelectItem>
+                    <SelectItem value="outerwear">Outerwear</SelectItem>
+                    <SelectItem value="shoes">Shoes</SelectItem>
+                    <SelectItem value="accessories">Accessories</SelectItem>
+                    <SelectItem value="toiletries">Toiletries</SelectItem>
+                    <SelectItem value="tech">Tech</SelectItem>
+                    <SelectItem value="documents">Documents</SelectItem>
+                    <SelectItem value="meds">Medications</SelectItem>
+                    <SelectItem value="misc">Miscellaneous</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="item-quantity">Quantity</Label>
+                <Input
+                  id="item-quantity"
+                  type="number"
+                  min="1"
+                  value={newItemForm.quantity}
+                  onChange={(e) => setNewItemForm(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                />
+              </div>
+              
+              <div className="flex items-end gap-2">
+                <Button onClick={handleAddItem} disabled={!newItemForm.name.trim()}>
+                  Add Item
+                </Button>
+                <Button variant="outline" onClick={() => setShowAddItem(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Trip Details Card */}
       <Card>
@@ -254,64 +502,84 @@ export function TripBasedGenerator({ masterList, onBackToLibrary }: TripBasedGen
         </CardContent>
       </Card>
 
-      {/* Heuristics Status */}
-      {!heuristicsApplied && packingItems.length > 0 && (
-        <Card className="border-orange-200 bg-orange-50">
+      {/* Suggestions Panel */}
+      {showSuggestions && trip.suggestions && trip.suggestions.some(s => !s.applied && !s.dismissedAt) && (
+        <SuggestionsPanel
+          suggestions={trip.suggestions}
+          onApplySuggestions={handleApplySuggestions}
+          onDismiss={() => setShowSuggestions(false)}
+          onDismissSuggestion={handleDismissSuggestion}
+        />
+      )}
+
+      {/* Packing Progress */}
+      {stats && (
+        <Card className="border-green-200 bg-green-50">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <AlertCircle className="h-5 w-5 text-orange-600" />
+                <CheckCircle className="h-5 w-5 text-green-600" />
                 <div>
-                  <div className="font-medium text-orange-900">Smart Heuristics Available</div>
-                  <div className="text-sm text-orange-700">
-                    Apply trip-based quantity calculations and get personalized suggestions
+                  <div className="font-medium text-green-900">Packing Progress</div>
+                  <div className="text-sm text-green-700">
+                    {stats.packedItems} of {stats.totalItems} items packed
+                    {stats.activeSuggestions > 0 && ` • ${stats.activeSuggestions} suggestions available`}
                   </div>
                 </div>
               </div>
-              <Button onClick={applyHeuristics} className="flex items-center gap-2">
-                <Wand2 className="h-4 w-4" />
-                Apply Smart Heuristics
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {heuristicsApplied && stats && (
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <div>
-                <div className="font-medium text-green-900">Smart Heuristics Applied</div>
-                <div className="text-sm text-green-700">
-                  {stats.heuristicItems} items optimized for your {stats.tripDays}-day trip with {stats.activities} activities
-                </div>
-              </div>
+              {!showSuggestions && stats.activeSuggestions > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSuggestions(true)}
+                  className="text-green-700 border-green-300"
+                >
+                  View Suggestions
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
       )}
 
       {/* Packing List */}
-      {packingItems.length > 0 && (
-        <PackingListGenerator 
-          masterList={{
-            ...masterList,
-            items: packingItems
-          }}
-          onBackToLibrary={() => {}}
-          trip={trip}
-          heuristicsConfig={heuristicsConfig}
-        />
-      )}
+      <div id="packing-list">
+        {trip.checklistItems.length > 0 && (
+          <PackingListGenerator 
+            masterList={masterList ? {
+              ...masterList,
+              items: trip.checklistItems
+            } : {
+              id: 'trip-checklist',
+              name: trip.name,
+              description: `Checklist for ${trip.destination}`,
+              category: 'Trip',
+              items: trip.checklistItems,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              isTemplate: false
+            }}
+            onBackToLibrary={onBackToLibrary || (() => {})}
+            trip={trip}
+            heuristicsConfig={heuristicsConfig}
+            onItemUpdate={handleItemUpdate}
+            onItemDelete={handleItemDelete}
+          />
+        )}
+      </div>
 
       {/* Dialogs */}
       <HeuristicsSettingsDialog
         open={showHeuristicsDialog}
         onOpenChange={setShowHeuristicsDialog}
         config={heuristicsConfig}
-        onConfigChange={setHeuristicsConfig}
+        onConfigChange={(newConfig) => {
+          setHeuristicsConfig(newConfig)
+          if (trip) {
+            trip.heuristicsConfig = newConfig
+            TripStorage.saveTrip(trip)
+          }
+        }}
       />
     </div>
   )

@@ -1,6 +1,11 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { Toaster } from '@/components/ui/toaster'
+import { GlobalHeader } from '@/components/global-header'
+import PawgrammerBanner from '@/components/pawgrammer-banner'
+import DemoBanner from '@/components/demo-banner'
+import VideoNudge from '@/components/VideoNudge'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -16,7 +21,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <PawgrammerBanner />
+        <GlobalHeader />
+        <div className="container mx-auto px-4">
+          <DemoBanner />
+        </div>
+        {children}
+        <VideoNudge />
+        <Toaster />
+      </body>
     </html>
   )
 }

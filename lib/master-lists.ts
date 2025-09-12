@@ -15,7 +15,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Business suits',
         category: 'tops',
         quantity: 2,
-        packed: false,
         essential: true,
         notes: 'Dark colors preferred'
       },
@@ -24,7 +23,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Dress shirts',
         category: 'tops',
         quantity: 3,
-        packed: false,
         essential: true
       },
       {
@@ -32,7 +30,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Business shoes',
         category: 'shoes',
         quantity: 2,
-        packed: false,
         essential: true
       },
       {
@@ -40,7 +37,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Laptop',
         category: 'tech',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -48,7 +44,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Phone charger',
         category: 'tech',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -56,7 +51,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Business cards',
         category: 'documents',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -64,7 +58,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Presentation materials',
         category: 'documents',
         quantity: 1,
-        packed: false,
         essential: false
       },
       {
@@ -72,7 +65,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Dress pants',
         category: 'bottoms',
         quantity: 2,
-        packed: false,
         essential: true
       },
       {
@@ -80,7 +72,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Business jacket',
         category: 'outerwear',
         quantity: 1,
-        packed: false,
         essential: true
       }
     ]
@@ -99,7 +90,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Swimwear',
         category: 'tops',
         quantity: 3,
-        packed: false,
         essential: true
       },
       {
@@ -107,7 +97,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Sunscreen',
         category: 'toiletries',
         quantity: 1,
-        packed: false,
         essential: true,
         notes: 'SPF 30 or higher'
       },
@@ -116,7 +105,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Beach towels',
         category: 'misc',
         quantity: 2,
-        packed: false,
         essential: true
       },
       {
@@ -124,7 +112,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Flip flops',
         category: 'shoes',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -132,7 +119,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Sunglasses',
         category: 'accessories',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -140,7 +126,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Beach bag',
         category: 'accessories',
         quantity: 1,
-        packed: false,
         essential: false
       },
       {
@@ -148,7 +133,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Snorkel gear',
         category: 'misc',
         quantity: 1,
-        packed: false,
         essential: false
       },
       {
@@ -156,7 +140,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Water bottle',
         category: 'misc',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -164,7 +147,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Beach shorts',
         category: 'bottoms',
         quantity: 2,
-        packed: false,
         essential: true
       },
       {
@@ -172,7 +154,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Sun hat',
         category: 'accessories',
         quantity: 1,
-        packed: false,
         essential: false
       },
       {
@@ -180,7 +161,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Light cover-up',
         category: 'outerwear',
         quantity: 1,
-        packed: false,
         essential: false
       }
     ]
@@ -199,7 +179,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Tent',
         category: 'misc',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -207,7 +186,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Sleeping bag',
         category: 'misc',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -215,7 +193,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Sleeping pad',
         category: 'misc',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -223,7 +200,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Hiking boots',
         category: 'shoes',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -231,7 +207,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Backpack',
         category: 'accessories',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -239,7 +214,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Headlamp',
         category: 'tech',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -247,7 +221,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'First aid kit',
         category: 'meds',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -255,7 +228,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Water filter',
         category: 'misc',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -263,7 +235,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Camping stove',
         category: 'misc',
         quantity: 1,
-        packed: false,
         essential: false
       },
       {
@@ -271,7 +242,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Cookware set',
         category: 'misc',
         quantity: 1,
-        packed: false,
         essential: false
       }
     ]
@@ -290,7 +260,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Comfortable walking shoes',
         category: 'shoes',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -298,7 +267,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Daypack',
         category: 'accessories',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -306,7 +274,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Camera',
         category: 'tech',
         quantity: 1,
-        packed: false,
         essential: false
       },
       {
@@ -314,7 +281,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Portable charger',
         category: 'tech',
         quantity: 1,
-        packed: false,
         essential: true
       },
       {
@@ -322,7 +288,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'City map/guidebook',
         category: 'documents',
         quantity: 1,
-        packed: false,
         essential: false
       },
       {
@@ -330,7 +295,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Umbrella',
         category: 'misc',
         quantity: 1,
-        packed: false,
         essential: false
       },
       {
@@ -338,7 +302,6 @@ export const defaultMasterLists: MasterList[] = [
         name: 'Casual clothes',
         category: 'tops',
         quantity: 3,
-        packed: false,
         essential: true
       }
     ]

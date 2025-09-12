@@ -9,16 +9,27 @@ export interface PackingItem {
   notes?: string
 }
 
+export interface MasterListItem {
+  id: string
+  name: string
+  category: string
+  quantity: number
+  essential: boolean
+  notes?: string
+}
+
 export interface MasterList {
   id: string
   name: string
   description: string
   category: string
-  items: PackingItem[]
+  items: MasterListItem[]
   createdAt: Date
   updatedAt: Date
   isTemplate: boolean
 }
+
+export type TripSetupMode = 'smart' | 'checklist'
 
 export interface Trip {
   id: string
@@ -35,6 +46,24 @@ export interface Trip {
   activities: string[]
   createdAt: string
   updatedAt: string
+  masterListId?: string
+  masterListName?: string
+  checklistItems: PackingItem[]
+  suggestions?: TripSuggestion[]
+  appliedSuggestions?: string[]
+  heuristicsConfig?: HeuristicConfig
+  setupMode?: TripSetupMode
+}
+
+export interface TripSuggestion {
+  id: string
+  type: 'add' | 'update' | 'remove'
+  item?: PackingItem
+  targetItemId?: string
+  reason: string
+  category: string
+  applied: boolean
+  dismissedAt?: string
 }
 
 export interface TripType {

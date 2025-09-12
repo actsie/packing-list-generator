@@ -47,7 +47,10 @@ export function EditMasterListDialog({ open, onOpenChange, list, onUpdate }: Edi
         category: list.category,
         isTemplate: list.isTemplate
       })
-      setItems([...list.items])
+      setItems(list.items.map(item => ({
+        ...item,
+        packed: false
+      })))
       setErrors({})
     }
   }, [list])

@@ -6,12 +6,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { MasterList, PackingItem } from '@/lib/types'
+import { MasterList, PackingItem, Trip } from '@/lib/types'
 import { defaultMasterLists, categories } from '@/lib/master-lists'
 import { MasterListCard } from './master-list-card'
 import { CreateMasterListDialog } from './create-master-list-dialog'
 import { EditMasterListDialog } from './edit-master-list-dialog'
-import { Search, Plus, Filter } from 'lucide-react'
+import { StartTripModal } from '../start-trip-modal'
+import { TripStorage } from '@/lib/trip-storage'
+import { Search, Plus, Filter, ArrowRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface MasterListLibraryProps {
   onSelectList?: (list: MasterList) => void
@@ -19,12 +23,25 @@ interface MasterListLibraryProps {
 }
 
 export function MasterListLibrary({ onSelectList, selectedListId }: MasterListLibraryProps) {
+  const router = useRouter()
   const [masterLists, setMasterLists] = useState<MasterList[]>(defaultMasterLists)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [editingList, setEditingList] = useState<MasterList | null>(null)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [startTripModalOpen, setStartTripModalOpen] = useState(false)
+  const [selectedMasterList, setSelectedMasterList] = useState<MasterList | null>(null)
+  const [activeTrip, setActiveTrip] = useState<Trip | null>(null)
+  const [recentTrips, setRecentTrips] = useState<Trip[]>([])
+
+  React.useEffect(() => {
+    const trip = TripStorage.getActiveTrip()
+    setActiveTrip(trip)
+    
+    const recent = TripStorage.getRecentTrips(3)
+    setRecentTrips(recent)
+  }, [])
 
   const uniqueCategories = useMemo(() => {
     const cats = new Set(masterLists.map(list => list.category))
@@ -85,8 +102,53 @@ export function MasterListLibrary({ onSelectList, selectedListId }: MasterListLi
     setMasterLists(prev => [...prev, duplicatedList])
   }
 
+  const handleStartTrip = (list: MasterList) => {
+    setSelectedMasterList(list)
+    setStartTripModalOpen(true)
+  }
+
+  const handleCreateTrip = (tripData: Omit<Trip, 'id' | 'createdAt' | 'updatedAt'>, mode: 'smart' | 'checklist') => {
+    const tripId = `trip-${Date.now()}`
+    const trip: Trip = {
+      ...tripData,
+      id: tripId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      days: Math.ceil((new Date(tripData.endDate).getTime() - new Date(tripData.startDate).getTime()) / (1000 * 60 * 60 * 24))
+    }
+
+    TripStorage.saveTrip(trip)
+    TripStorage.setActiveTrip(tripId)
+    router.push(`/trip/${tripId}`)
+  }
+
+  const handleResume = (tripId: string) => {
+    TripStorage.setActiveTrip(tripId)
+    router.push(`/trip/${tripId}`)
+  }
+
   return (
     <div className="space-y-6">
+      {activeTrip && (
+        <Alert className="border-primary">
+          <AlertDescription className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Resume last trip:</span>
+              <span>{activeTrip.name}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push(`/trip/${activeTrip.id}`)}
+              className="flex items-center gap-2"
+            >
+              Continue
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Master List Library</h2>
@@ -102,6 +164,46 @@ export function MasterListLibrary({ onSelectList, selectedListId }: MasterListLi
           Create New List
         </Button>
       </div>
+
+      {/* Recent Trips Strip */}
+      {recentTrips.length > 0 && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-3">Recent Trips</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {recentTrips.map((trip) => {
+              const progress = trip.checklistItems.filter(item => item.packed).length / trip.checklistItems.length * 100
+              return (
+                <Card 
+                  key={trip.id} 
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handleResume(trip.id)}
+                >
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{trip.name}</CardTitle>
+                    <CardDescription className="text-xs">
+                      {trip.destination} • {new Date(trip.startDate).toLocaleDateString()}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Progress</span>
+                        <span className="font-medium">{Math.round(progress)}%</span>
+                      </div>
+                      <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
+                        <div 
+                          className="bg-primary h-full transition-all duration-300"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -143,6 +245,7 @@ export function MasterListLibrary({ onSelectList, selectedListId }: MasterListLi
                 list={list}
                 isSelected={selectedListId === list.id}
                 onSelect={onSelectList}
+                onStartTrip={handleStartTrip}
                 onEdit={handleEditList}
                 onDelete={handleDeleteList}
                 onDuplicate={handleDuplicateList}
@@ -205,6 +308,15 @@ export function MasterListLibrary({ onSelectList, selectedListId }: MasterListLi
           onOpenChange={setIsEditDialogOpen}
           list={editingList}
           onUpdate={handleUpdateList}
+        />
+      )}
+
+      {selectedMasterList && (
+        <StartTripModal
+          open={startTripModalOpen}
+          onOpenChange={setStartTripModalOpen}
+          masterList={selectedMasterList}
+          onCreateTrip={handleCreateTrip}
         />
       )}
     </div>

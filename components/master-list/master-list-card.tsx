@@ -26,6 +26,7 @@ interface MasterListCardProps {
   list: MasterList
   isSelected?: boolean
   onSelect?: (list: MasterList) => void
+  onStartTrip?: (list: MasterList) => void
   onEdit?: (list: MasterList) => void
   onDelete?: (listId: string) => void
   onDuplicate?: (list: MasterList) => void
@@ -35,6 +36,7 @@ export function MasterListCard({
   list, 
   isSelected, 
   onSelect, 
+  onStartTrip,
   onEdit, 
   onDelete, 
   onDuplicate 
@@ -47,7 +49,7 @@ export function MasterListCard({
 
   const handleCardClick = (e: React.MouseEvent) => {
     e.preventDefault()
-    onSelect?.(list)
+    onStartTrip?.(list)
   }
 
   const handleActionClick = (e: React.MouseEvent, action: () => void) => {
@@ -149,12 +151,12 @@ export function MasterListCard({
 
           <div className="pt-2">
             <Button 
-              variant="outline" 
+              variant="default" 
               size="sm" 
               className="w-full"
               onClick={handleCardClick}
             >
-              {isSelected ? 'Selected' : 'Select List'}
+              Start a Trip
             </Button>
           </div>
         </div>

@@ -19,9 +19,11 @@ interface PackingListGeneratorProps {
   onAddItemsFromKit?: (items: PackingItem[]) => void
   trip?: Trip
   heuristicsConfig?: HeuristicConfig
+  onItemUpdate?: (itemId: string, updates: Partial<PackingItem>) => void
+  onItemDelete?: (itemId: string) => void
 }
 
-export function PackingListGenerator({ masterList, onBackToLibrary, onAddItemsFromKit, trip, heuristicsConfig }: PackingListGeneratorProps) {
+export function PackingListGenerator({ masterList, onBackToLibrary, onAddItemsFromKit, trip, heuristicsConfig, onItemUpdate, onItemDelete }: PackingListGeneratorProps) {
   const [packingItems, setPackingItems] = useState<PackingItem[]>(() => 
     masterList.items.map(item => ({ ...item, packed: false, pinned: false }))
   )
@@ -74,27 +76,45 @@ export function PackingListGenerator({ masterList, onBackToLibrary, onAddItemsFr
   }, [packingItems])
 
   const toggleItemPacked = (itemId: string) => {
-    setPackingItems(prev => 
-      prev.map(item => 
-        item.id === itemId ? { ...item, packed: !item.packed } : item
+    const item = packingItems.find(i => i.id === itemId)
+    if (!item) return
+    
+    if (onItemUpdate) {
+      onItemUpdate(itemId, { packed: !item.packed })
+    } else {
+      setPackingItems(prev => 
+        prev.map(item => 
+          item.id === itemId ? { ...item, packed: !item.packed } : item
+        )
       )
-    )
+    }
   }
 
   const toggleItemPinned = (itemId: string) => {
-    setPackingItems(prev => 
-      prev.map(item => 
-        item.id === itemId ? { ...item, pinned: !item.pinned } : item
+    const item = packingItems.find(i => i.id === itemId)
+    if (!item) return
+    
+    if (onItemUpdate) {
+      onItemUpdate(itemId, { pinned: !item.pinned })
+    } else {
+      setPackingItems(prev => 
+        prev.map(item => 
+          item.id === itemId ? { ...item, pinned: !item.pinned } : item
+        )
       )
-    )
+    }
   }
 
   const updateItemQuantity = (itemId: string, quantity: number) => {
-    setPackingItems(prev => 
-      prev.map(item => 
-        item.id === itemId ? { ...item, quantity: Math.max(1, quantity) } : item
+    if (onItemUpdate) {
+      onItemUpdate(itemId, { quantity: Math.max(1, quantity) })
+    } else {
+      setPackingItems(prev => 
+        prev.map(item => 
+          item.id === itemId ? { ...item, quantity: Math.max(1, quantity) } : item
+        )
       )
-    )
+    }
   }
 
   const addCustomItem = () => {
@@ -111,7 +131,11 @@ export function PackingListGenerator({ masterList, onBackToLibrary, onAddItemsFr
   }
 
   const removeItem = (itemId: string) => {
-    setPackingItems(prev => prev.filter(item => item.id !== itemId))
+    if (onItemDelete) {
+      onItemDelete(itemId)
+    } else {
+      setPackingItems(prev => prev.filter(item => item.id !== itemId))
+    }
   }
 
   const clearFilters = () => {

@@ -1,24 +1,35 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MasterListLibrary } from '@/components/master-list/master-list-library'
 import { PackingListGenerator } from '@/components/packing-list/packing-list-generator'
 import { AlwaysPackedKitsLibrary } from '@/components/always-packed-kits/always-packed-kits-library'
 import { BuyThereManager } from '@/components/buy-there/buy-there-manager'
-import { MasterList, PackingItem } from '@/lib/types'
+import { MasterList, PackingItem, Trip } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Package, BookOpen, List, Star, Wand2, Package2, Scan, CalendarDays, FileText, ShoppingBag, ChevronDown, ChevronUp } from 'lucide-react'
 import { TripBasedGenerator } from '@/components/trip-based-generator'
 import { BodyScanDayWizard } from '@/components/body-scan-day-wizard'
 import { PostTripReviewComponent } from '@/components/post-trip-review'
+import { TripStorage } from '@/lib/trip-storage'
 
 export default function HomePage() {
   const [selectedMasterList, setSelectedMasterList] = useState<MasterList | null>(null)
   const [packingListItems, setPackingListItems] = useState<PackingItem[]>([])
   const [activeTab, setActiveTab] = useState('library')
   const [featuresExpanded, setFeaturesExpanded] = useState(true)
+  const [activeTrip, setActiveTrip] = useState<Trip | null>(null)
+
+  // Check for active trip on mount - if found, redirect to trip page
+  useEffect(() => {
+    const trip = TripStorage.getActiveTrip()
+    if (trip) {
+      // Redirect to the trip page
+      window.location.href = `/trip/${trip.id}`
+    }
+  }, [])
 
   const handleSelectMasterList = (list: MasterList) => {
     setSelectedMasterList(list)
@@ -181,7 +192,10 @@ export default function HomePage() {
         <TabsContent value="buy-there" className="space-y-6">
           {selectedMasterList || packingListItems.length > 0 ? (
             <BuyThereManager
-              packingItems={selectedMasterList?.items || packingListItems}
+              packingItems={selectedMasterList?.items.map(item => ({
+                ...item,
+                packed: false
+              })) || packingListItems}
               onBackToPackingList={() => setActiveTab('generator')}
               onItemsUpdated={(items) => {
                 // Update packing list items with buy-there information
@@ -240,7 +254,8 @@ export default function HomePage() {
               shoppingLikely: false,
               activities: ['business', 'dining', 'walking'],
               createdAt: '2024-01-10T00:00:00Z',
-              updatedAt: '2024-01-10T00:00:00Z'
+              updatedAt: '2024-01-10T00:00:00Z',
+              checklistItems: []
             }}
             packingItems={packingListItems.length > 0 ? packingListItems : [
               {

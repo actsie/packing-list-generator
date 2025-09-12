@@ -29,7 +29,10 @@ export function BodyScanDayWizard({ masterList, trip, onBack, onComplete }: Body
   const [dayPlans, setDayPlans] = useState<DayPlan[]>([])
   const [activeTab, setActiveTab] = useState('body-scan')
 
-  const items = masterList?.items || []
+  const items: PackingItem[] = masterList?.items.map(item => ({
+    ...item,
+    packed: false
+  })) || []
   const hasTrip = Boolean(trip)
   const hasMasterList = Boolean(masterList)
 
