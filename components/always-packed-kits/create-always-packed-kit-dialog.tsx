@@ -152,16 +152,16 @@ export function CreateAlwaysPackedKitDialog({ open, onOpenChange, onCreate }: Cr
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Icon</Label>
-              <div className="grid grid-cols-10 gap-2">
+              <div className="grid grid-cols-8 sm:grid-cols-10 gap-2 max-h-[120px] overflow-y-auto p-1">
                 {kitIcons.map(icon => (
                   <button
                     key={icon}
                     type="button"
                     onClick={() => setKitIcon(icon)}
-                    className={`p-2 text-lg border rounded hover:bg-accent ${
+                    className={`p-2 text-lg border rounded hover:bg-accent flex items-center justify-center transition-colors ${
                       kitIcon === icon ? 'bg-primary text-primary-foreground' : ''
                     }`}
                   >
@@ -170,6 +170,7 @@ export function CreateAlwaysPackedKitDialog({ open, onOpenChange, onCreate }: Cr
                 ))}
               </div>
             </div>
+            
             <div className="space-y-2">
               <Label>Color</Label>
               <Select value={kitColor} onValueChange={setKitColor}>

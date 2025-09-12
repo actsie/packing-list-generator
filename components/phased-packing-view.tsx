@@ -214,7 +214,7 @@ export function PhasedPackingView({ items, onItemToggle, onItemQuantityUpdate }:
       </div>
 
       <Tabs value={activePhaseId} onValueChange={setActivePhaseId} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-6">
+        <TabsList className="grid w-full grid-cols-5 mb-6 h-auto bg-muted/50 p-1">
           {phasedConfig.phases.map((phase, index) => {
             const progress = getPhaseProgress(phase)
             const isComplete = isPhaseComplete(phase)
@@ -223,9 +223,9 @@ export function PhasedPackingView({ items, onItemToggle, onItemQuantityUpdate }:
               <TabsTrigger 
                 key={phase.id} 
                 value={phase.id}
-                className="relative flex flex-col gap-1 h-auto p-3"
+                className="relative flex flex-col gap-1 h-auto py-3 px-2 data-[state=active]:bg-background"
               >
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 justify-center">
                   {isComplete ? (
                     <CheckCircle className="h-4 w-4 text-green-600" />
                   ) : (
@@ -233,7 +233,7 @@ export function PhasedPackingView({ items, onItemToggle, onItemQuantityUpdate }:
                   )}
                   <span className="text-xs font-medium">Phase {index + 1}</span>
                 </div>
-                <div className="text-xs opacity-75 truncate max-w-full">
+                <div className="text-xs opacity-75 truncate max-w-full text-center">
                   {progress}%
                 </div>
                 {isComplete && (

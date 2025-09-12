@@ -8,7 +8,8 @@ import { AlwaysPackedKitsLibrary } from '@/components/always-packed-kits/always-
 import { BuyThereManager } from '@/components/buy-there/buy-there-manager'
 import { MasterList, PackingItem } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Package, BookOpen, List, Star, Wand2, Package2, Scan, CalendarDays, FileText, ShoppingBag } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Package, BookOpen, List, Star, Wand2, Package2, Scan, CalendarDays, FileText, ShoppingBag, ChevronDown, ChevronUp } from 'lucide-react'
 import { TripBasedGenerator } from '@/components/trip-based-generator'
 import { BodyScanDayWizard } from '@/components/body-scan-day-wizard'
 import { PostTripReviewComponent } from '@/components/post-trip-review'
@@ -17,6 +18,7 @@ export default function HomePage() {
   const [selectedMasterList, setSelectedMasterList] = useState<MasterList | null>(null)
   const [packingListItems, setPackingListItems] = useState<PackingItem[]>([])
   const [activeTab, setActiveTab] = useState('library')
+  const [featuresExpanded, setFeaturesExpanded] = useState(true)
 
   const handleSelectMasterList = (list: MasterList) => {
     setSelectedMasterList(list)
@@ -291,7 +293,36 @@ export default function HomePage() {
         </TabsContent>
       </Tabs>
 
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-6">
+      {/* Feature Highlights Section */}
+      <div className="mt-12">
+        <div className="flex items-center justify-center mb-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setFeaturesExpanded(!featuresExpanded)}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {featuresExpanded ? (
+              <>
+                <ChevronUp className="h-4 w-4 mr-2" />
+                Collapse Feature Highlights
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-4 w-4 mr-2" />
+                Expand Feature Highlights
+              </>
+            )}
+          </Button>
+        </div>
+
+        <div
+          className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-6 transition-all duration-300 ease-in-out ${
+            featuresExpanded
+              ? 'opacity-100 max-h-[1000px]'
+              : 'opacity-0 max-h-0 overflow-hidden'
+          }`}
+        >
         <Card>
           <CardHeader className="text-center">
             <BookOpen className="h-8 w-8 mx-auto text-primary mb-2" />
@@ -375,6 +406,7 @@ export default function HomePage() {
             </CardDescription>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   )
