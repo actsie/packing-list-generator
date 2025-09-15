@@ -2,19 +2,20 @@
 
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Trip, TripSuggestion } from '@/lib/types'
+import { Trip } from '@/lib/types'
 import { TripStorage } from '@/lib/trip-storage'
 import { TripBasedGenerator } from './trip-based-generator'
-import { SuggestionsPanel } from './suggestions-panel'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card } from '@/components/ui/card'
 import { ArrowRight, Sparkles, CheckCircle } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
-import { generateSmartSuggestions } from '@/lib/smart-suggestions'
 import { ChecklistHeader } from './checklist-header'
 import { SaveAsTemplateModal } from './save-as-template-modal'
 import { MasterListStorage } from '@/lib/master-list-storage'
+import { generateSmartSuggestions } from '@/lib/smart-suggestions'
+import { BodyScanDayWizard } from './body-scan-day-wizard'
+import { BuyThereManager } from './buy-there/buy-there-manager'
 
 interface TripPageProps {
   tripId: string
@@ -28,6 +29,8 @@ export function TripPage({ tripId }: TripPageProps) {
   const [showNextStepBar, setShowNextStepBar] = useState(false)
   const [suggestionsApplied, setSuggestionsApplied] = useState(false)
   const [showSaveAsTemplateModal, setShowSaveAsTemplateModal] = useState(false)
+  const [showBodyScanWizard, setShowBodyScanWizard] = useState(false)
+  const [showArrivalList, setShowArrivalList] = useState(false)
 
   useEffect(() => {
     const loadTrip = () => {
@@ -39,12 +42,6 @@ export function TripPage({ tripId }: TripPageProps) {
         if (tripData.setupMode === 'smart' && (!tripData.appliedSuggestions || tripData.appliedSuggestions.length === 0)) {
           setShowNextStepBar(true)
           
-          // Generate suggestions if they don't exist
-          if (!tripData.suggestions || tripData.suggestions.length === 0) {
-            const suggestions = generateSmartSuggestions(tripData)
-            TripStorage.addSuggestions(tripId, suggestions)
-            setTrip({ ...tripData, suggestions })
-          }
         }
       } else {
         router.push('/')
@@ -55,43 +52,6 @@ export function TripPage({ tripId }: TripPageProps) {
     loadTrip()
   }, [tripId, router])
 
-  const handleApplySuggestions = (suggestionIds: string[]) => {
-    if (!trip) return
-
-    TripStorage.applySuggestions(tripId, suggestionIds)
-    const updatedTrip = TripStorage.getTrip(tripId)
-    if (updatedTrip) {
-      setTrip(updatedTrip)
-      setSuggestionsApplied(true)
-      setShowNextStepBar(false)
-      
-      toast({
-        title: "Suggestions applied successfully! ✓",
-        description: (
-          <div className="space-y-2">
-            <p>Your packing list has been updated with the selected suggestions.</p>
-            <p className="text-sm font-medium">Next steps:</p>
-            <ul className="text-sm list-disc list-inside space-y-1">
-              <li>Review and adjust quantities as needed</li>
-              <li>Mark items as packed when ready</li>
-              <li>Use the Tools menu for additional features</li>
-            </ul>
-          </div>
-        ),
-        duration: 8000,
-      })
-    }
-  }
-
-  const handleDismissSuggestion = (suggestionId: string) => {
-    if (!trip) return
-
-    TripStorage.dismissSuggestion(tripId, suggestionId)
-    const updatedTrip = TripStorage.getTrip(tripId)
-    if (updatedTrip) {
-      setTrip(updatedTrip)
-    }
-  }
 
   if (isLoading) {
     return (
@@ -143,17 +103,6 @@ export function TripPage({ tripId }: TripPageProps) {
       )}
 
       <div className="container mx-auto p-6">
-        {/* Smart Setup Mode: Show suggestions panel */}
-        {trip.setupMode === 'smart' && trip.suggestions && trip.suggestions.length > 0 && !suggestionsApplied && (
-          <div id="suggestions-panel" className="mb-8">
-            <SuggestionsPanel
-              suggestions={trip.suggestions.filter(s => !s.dismissedAt)}
-              onApplySuggestions={handleApplySuggestions}
-              onDismissSuggestion={handleDismissSuggestion}
-              onDismiss={() => setShowNextStepBar(false)}
-            />
-          </div>
-        )}
 
         {/* Success message after applying suggestions */}
         {suggestionsApplied && (
@@ -209,32 +158,41 @@ export function TripPage({ tripId }: TripPageProps) {
           <ChecklistHeader 
             trip={trip}
             onOpenSmartSetup={() => {
-              // Generate suggestions if not already present
+              // Generate suggestions if they don't exist
               if (!trip.suggestions || trip.suggestions.length === 0) {
                 const suggestions = generateSmartSuggestions(trip)
                 TripStorage.addSuggestions(tripId, suggestions)
                 const updatedTrip = TripStorage.getTrip(tripId)
                 if (updatedTrip) {
                   setTrip(updatedTrip)
-                  setShowNextStepBar(true)
+                  toast({
+                    title: "Smart suggestions generated",
+                    description: "Scroll down to view your personalized packing suggestions.",
+                  })
                 }
               }
+              
+              // Scroll to the trip-based-generator section which contains suggestions
+              setTimeout(() => {
+                const packingListElement = document.getElementById('packing-list')
+                packingListElement?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }, 100)
             }}
             onOpenBodyScan={() => {
-              toast({
-                title: "Body-Scan & Day Viz",
-                description: "This feature is coming soon!",
-              })
+              setShowBodyScanWizard(true)
             }}
             onOpenArrivalList={() => {
-              toast({
-                title: "Arrival List",
-                description: "This feature is coming soon!",
-              })
+              setShowArrivalList(true)
             }}
             onSaveAsTemplate={() => setShowSaveAsTemplateModal(true)}
           />
-          <TripBasedGenerator trip={trip} />
+          <TripBasedGenerator 
+            trip={trip} 
+            onBackToLibrary={() => {
+              TripStorage.clearActiveTrip()
+              router.push('/')
+            }}
+          />
         </div>
       </div>
 
@@ -251,6 +209,71 @@ export function TripPage({ tripId }: TripPageProps) {
           })
         }}
       />
+
+      {/* Body-Scan & Day Viz Modal */}
+      {showBodyScanWizard && (
+        <div className="fixed inset-0 z-50 bg-background">
+          <BodyScanDayWizard
+            masterList={{
+              id: trip.masterListId || 'trip-list',
+              name: trip.name,
+              description: `Packing list for ${trip.destination}`,
+              category: 'Trip',
+              items: trip.checklistItems.map(item => ({
+                id: item.id,
+                name: item.name,
+                category: item.category,
+                quantity: item.quantity,
+                essential: item.essential,
+                notes: item.notes
+              })),
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              isTemplate: false
+            }}
+            onBack={() => setShowBodyScanWizard(false)}
+            onComplete={(results) => {
+              // Update trip with optimized items
+              if (results.optimizedItems) {
+                const updatedTrip = { ...trip }
+                updatedTrip.checklistItems = results.optimizedItems.map(item => ({
+                  ...item,
+                  packed: false
+                }))
+                TripStorage.saveTrip(updatedTrip)
+                setTrip(updatedTrip)
+                toast({
+                  title: "Packing list optimized",
+                  description: "Your items have been updated based on the Body-Scan results.",
+                })
+              }
+              setShowBodyScanWizard(false)
+            }}
+          />
+        </div>
+      )}
+
+      {/* Arrival List Modal */}
+      {showArrivalList && (
+        <div className="fixed inset-0 z-50 bg-background overflow-auto">
+          <div className="container mx-auto p-6">
+            <BuyThereManager
+              packingItems={trip.checklistItems}
+              onBackToPackingList={() => setShowArrivalList(false)}
+              onItemsUpdated={(updatedItems) => {
+                // Update trip with buy-there information
+                const updatedTrip = { ...trip, checklistItems: updatedItems }
+                TripStorage.saveTrip(updatedTrip)
+                setTrip(updatedTrip)
+                toast({
+                  title: "Buy-there items updated",
+                  description: "Your arrival shopping list has been saved.",
+                })
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

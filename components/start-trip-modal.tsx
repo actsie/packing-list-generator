@@ -9,12 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Calendar } from '@/components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { MasterList, Trip, TripSetupMode } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
-import { Calendar as CalendarIcon, Sparkles, List, Clock } from 'lucide-react'
+import { Sparkles, List, Clock } from 'lucide-react'
 
 interface StartTripModalProps {
   open: boolean
@@ -144,56 +142,41 @@ export function StartTripModal({ open, onOpenChange, masterList, onCreateTrip }:
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Start Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !startDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate ? format(startDate, "PPP") : "Pick a date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 z-50" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={setStartDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <Label htmlFor="startDate">Start Date</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={startDate ? format(startDate, "yyyy-MM-dd") : ''}
+                    onChange={(e) => {
+                      const date = e.target.value ? new Date(e.target.value) : undefined
+                      setStartDate(date)
+                      // Reset end date if it's before the new start date
+                      if (date && endDate && endDate < date) {
+                        setEndDate(undefined)
+                      }
+                    }}
+                    min={format(new Date(), "yyyy-MM-dd")}
+                  />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>End Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !endDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {endDate ? format(endDate, "PPP") : "Pick a date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 z-50" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={setEndDate}
-                        disabled={(date) => startDate ? date < startDate : false}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <Label htmlFor="endDate">End Date</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={endDate ? format(endDate, "yyyy-MM-dd") : ''}
+                    onChange={(e) => {
+                      const date = e.target.value ? new Date(e.target.value) : undefined
+                      setEndDate(date)
+                    }}
+                    min={startDate ? format(startDate, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd")}
+                    className={cn(
+                      startDate && endDate && endDate < startDate && "border-red-500"
+                    )}
+                  />
+                  {startDate && endDate && endDate < startDate && (
+                    <p className="text-sm text-red-500">End date must be after start date</p>
+                  )}
                 </div>
               </div>
 

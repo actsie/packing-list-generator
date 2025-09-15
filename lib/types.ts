@@ -7,6 +7,8 @@ export interface PackingItem {
   essential: boolean
   pinned?: boolean
   notes?: string
+  computed_qty?: number
+  override_qty?: number
 }
 
 export interface MasterListItem {
@@ -60,6 +62,7 @@ export interface TripSuggestion {
   type: 'add' | 'update' | 'remove'
   item?: PackingItem
   targetItemId?: string
+  originalQuantity?: number
   reason: string
   category: string
   applied: boolean

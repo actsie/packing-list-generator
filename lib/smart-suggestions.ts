@@ -17,6 +17,7 @@ export function generateSmartSuggestions(trip: Trip): TripSuggestion[] {
         type: 'update',
         targetItemId: topsItem.id,
         item: { ...topsItem, quantity: 5 },
+        originalQuantity: topsItem.quantity,
         reason: `With laundry access, reduce from ${topsItem.quantity} to 5 tops (you can wash mid-trip)`,
         category: 'clothing',
         applied: false
@@ -35,6 +36,7 @@ export function generateSmartSuggestions(trip: Trip): TripSuggestion[] {
             type: 'update',
             targetItemId: item.id,
             item: { ...item, quantity: suggestedQty },
+            originalQuantity: item.quantity,
             reason: `With laundry access, reduce ${item.name} from ${item.quantity} to ${suggestedQty}`,
             category: 'clothing',
             applied: false
@@ -51,6 +53,7 @@ export function generateSmartSuggestions(trip: Trip): TripSuggestion[] {
         type: 'update',
         targetItemId: underwearItem.id,
         item: { ...underwearItem, quantity: days + 1 },
+        originalQuantity: underwearItem.quantity,
         reason: `Without laundry, increase underwear from ${underwearItem.quantity} to ${days + 1} pairs (1 per day + 1 spare)`,
         category: 'clothing',
         applied: false
@@ -65,6 +68,7 @@ export function generateSmartSuggestions(trip: Trip): TripSuggestion[] {
         type: 'update',
         targetItemId: socksItem.id,
         item: { ...socksItem, quantity: days + 1 },
+        originalQuantity: socksItem.quantity,
         reason: `Without laundry, increase socks from ${socksItem.quantity} to ${days + 1} pairs`,
         category: 'clothing',
         applied: false
@@ -78,6 +82,7 @@ export function generateSmartSuggestions(trip: Trip): TripSuggestion[] {
         type: 'update',
         targetItemId: topsItem.id,
         item: { ...topsItem, quantity: days },
+        originalQuantity: topsItem.quantity,
         reason: `Without laundry, increase tops from ${topsItem.quantity} to ${days} (1 per day)`,
         category: 'clothing',
         applied: false

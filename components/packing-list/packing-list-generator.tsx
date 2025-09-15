@@ -351,7 +351,8 @@ export function PackingListGenerator({ masterList, onBackToLibrary, onAddItemsFr
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map(item => (
           <Card 
-            key={item.id} 
+            key={item.id}
+            id={`item-${item.id}`}
             className={`transition-all ${item.packed ? 'bg-green-50 border-green-200' : ''}`}
           >
             <CardHeader className="pb-3">

@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { BuyThereItem, ArrivalListConfig, PackingItem } from '@/lib/types'
 import { BuyThereFilterComponent } from './buy-there-filter'
 import { ArrivalList } from './arrival-list'
-import { ArrowLeft, ShoppingBag, Package, Settings, List, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, ShoppingBag, Package, Settings, List, CheckCircle2, X } from 'lucide-react'
 
 interface BuyThereManagerProps {
   packingItems: PackingItem[]
@@ -78,20 +78,22 @@ export function BuyThereManager({ packingItems, onBackToPackingList, onItemsUpda
     .filter(item => item.buyAtDestination)
     .reduce((sum, item) => sum + (item.estimatedCost || 0), 0)
 
-  React.useEffect(() => {
+  // Only update parent when user explicitly saves or exits
+  const handleSaveAndExit = () => {
     if (onItemsUpdated) {
       onItemsUpdated(buyThereItems)
     }
-  }, [buyThereItems, onItemsUpdated])
+    onBackToPackingList()
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={onBackToPackingList}>
+          <Button variant="outline" onClick={handleSaveAndExit}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Packing List
+            Save & Back to Packing List
           </Button>
           <div>
             <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -109,6 +111,9 @@ export function BuyThereManager({ packingItems, onBackToPackingList, onItemsUpda
             <div className="text-2xl font-bold">{buyThereItemsCount}</div>
             <div className="text-sm text-muted-foreground">items to buy</div>
           </div>
+          <Button variant="ghost" size="icon" onClick={onBackToPackingList} title="Close without saving">
+            <X className="h-4 w-4" />
+          </Button>
           {config.showCosts && totalEstimatedCost > 0 && (
             <div className="text-right border-l pl-4">
               <div className="text-2xl font-bold text-green-600">${totalEstimatedCost}</div>

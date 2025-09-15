@@ -57,3 +57,77 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  /* Calendar specific styles to ensure proper grid layout */
+  .rdp {
+    --rdp-cell-size: 40px;
+    --rdp-accent-color: hsl(var(--primary));
+    --rdp-background-color: hsl(var(--accent));
+    --rdp-accent-color-dark: hsl(var(--primary));
+    --rdp-background-color-dark: hsl(var(--accent));
+    --rdp-outline: 2px solid hsl(var(--ring));
+    --rdp-outline-selected: 2px solid hsl(var(--ring));
+  }
+
+  /* Ensure calendar maintains proper grid structure */
+  .rdp-months {
+    @apply relative;
+  }
+
+  .rdp-head {
+    @apply border-b border-border/20;
+  }
+
+  .rdp-tbody {
+    @apply mt-2;
+  }
+
+  /* Prevent weekday labels from wrapping */
+  .rdp-head_cell {
+    @apply flex-shrink-0 whitespace-nowrap;
+  }
+
+  /* Ensure outside month days are properly styled */
+  .rdp-day_outside {
+    @apply opacity-30 pointer-events-none;
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 640px) {
+    .rdp {
+      --rdp-cell-size: 36px;
+    }
+    
+    .rdp-head_cell {
+      @apply text-xs;
+    }
+    
+    .rdp-cell {
+      @apply text-sm;
+    }
+
+    /* Ensure navigation buttons are large enough for touch */
+    .rdp-nav_button {
+      @apply w-11 h-11;
+    }
+  }
+
+  /* Range selection styles */
+  .rdp-day_range_start {
+    @apply rounded-l-md;
+  }
+
+  .rdp-day_range_end {
+    @apply rounded-r-md;
+  }
+
+  .rdp-day_range_middle {
+    @apply rounded-none;
+  }
+
+  /* Fix for range selection with outside days */
+  .rdp-day_outside.rdp-day_selected {
+    @apply opacity-30 bg-accent/50;
+  }
+}

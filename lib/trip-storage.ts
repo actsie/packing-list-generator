@@ -57,29 +57,45 @@ export class TripStorage {
     this.saveTrip(trip)
   }
 
-  static applySuggestions(tripId: string, suggestionIds: string[]): void {
+  static applySuggestions(tripId: string, suggestionsToApply: Array<TripSuggestion & { userQuantity?: number }>): void {
     const trip = this.getTrip(tripId)
     if (!trip) return
     
-    const suggestionsToApply = trip.suggestions?.filter(s => suggestionIds.includes(s.id)) || []
-    
     // Apply each suggestion
     suggestionsToApply.forEach(suggestion => {
+      // Check if already applied to make it idempotent
+      if (suggestion.applied) return
+      
       if (suggestion.type === 'add' && suggestion.item) {
-        // Add new item
-        trip.checklistItems.push({
-          ...suggestion.item,
-          id: `item-${Date.now()}-${Math.random()}`
-        })
+        // Check if item already exists (idempotent check)
+        const existingItem = trip.checklistItems.find(item => 
+          item.name.toLowerCase() === suggestion.item!.name.toLowerCase()
+        )
+        
+        if (!existingItem) {
+          // Add new item
+          const qty = suggestion.userQuantity || suggestion.item.quantity
+          trip.checklistItems.push({
+            ...suggestion.item,
+            id: `item-${Date.now()}-${Math.random()}`,
+            quantity: qty,
+            computed_qty: suggestion.item.quantity,
+            override_qty: suggestion.userQuantity ? qty : undefined
+          })
+        }
       } else if (suggestion.type === 'update' && suggestion.targetItemId) {
         // Update existing item
         const itemIndex = trip.checklistItems.findIndex(item => item.id === suggestion.targetItemId)
         if (itemIndex >= 0 && suggestion.item) {
-          // Only update the specific fields from the suggestion
+          const currentItem = trip.checklistItems[itemIndex]
+          const qty = suggestion.userQuantity || suggestion.item.quantity
+          
+          // Preserve user overrides if they exist and we're not explicitly overriding
           trip.checklistItems[itemIndex] = {
-            ...trip.checklistItems[itemIndex],
-            quantity: suggestion.item.quantity,
-            name: suggestion.item.name || trip.checklistItems[itemIndex].name
+            ...currentItem,
+            quantity: qty,
+            computed_qty: suggestion.item.quantity,
+            override_qty: suggestion.userQuantity ? qty : currentItem.override_qty
           }
         }
       } else if (suggestion.type === 'remove' && suggestion.targetItemId) {
@@ -87,15 +103,17 @@ export class TripStorage {
         trip.checklistItems = trip.checklistItems.filter(item => item.id !== suggestion.targetItemId)
       }
       
-      // Mark suggestion as applied
-      suggestion.applied = true
+      // Mark suggestion as applied in the original suggestions array
+      const suggestionInTrip = trip.suggestions?.find(s => s.id === suggestion.id)
+      if (suggestionInTrip) {
+        suggestionInTrip.applied = true
+      }
     })
     
-    // Track applied suggestions
-    trip.appliedSuggestions = [
-      ...(trip.appliedSuggestions || []),
-      ...suggestionIds
-    ]
+    // Track applied suggestions (idempotent - use Set to avoid duplicates)
+    const appliedSet = new Set(trip.appliedSuggestions || [])
+    suggestionsToApply.forEach(s => appliedSet.add(s.id))
+    trip.appliedSuggestions = Array.from(appliedSet)
     
     this.saveTrip(trip)
   }
@@ -149,8 +167,15 @@ export class TripStorage {
     
     const itemIndex = trip.checklistItems.findIndex(item => item.id === itemId)
     if (itemIndex >= 0) {
+      const currentItem = trip.checklistItems[itemIndex]
+      
+      // If quantity is being updated, set it as an override
+      if (updates.quantity !== undefined && updates.quantity !== currentItem.computed_qty) {
+        updates.override_qty = updates.quantity
+      }
+      
       trip.checklistItems[itemIndex] = {
-        ...trip.checklistItems[itemIndex],
+        ...currentItem,
         ...updates
       }
       this.saveTrip(trip)

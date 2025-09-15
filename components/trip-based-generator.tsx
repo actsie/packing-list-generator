@@ -17,6 +17,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { generateSmartSuggestions } from '@/lib/smart-suggestions'
 
 interface TripBasedGeneratorProps {
   masterList?: MasterList
@@ -24,7 +25,7 @@ interface TripBasedGeneratorProps {
   trip?: Trip
 }
 
-export function TripBasedGenerator({ masterList, onBackToLibrary, trip: propTrip }: TripBasedGeneratorProps) {
+export function TripBasedGenerator({ masterList, onBackToLibrary = () => {}, trip: propTrip }: TripBasedGeneratorProps) {
   const [trip, setTrip] = useState<Trip | null>(propTrip || null)
   const [showTripDialog, setShowTripDialog] = useState(false)
   const [showHeuristicsDialog, setShowHeuristicsDialog] = useState(false)
@@ -41,6 +42,45 @@ export function TripBasedGenerator({ masterList, onBackToLibrary, trip: propTrip
 
   const heuristics = useMemo(() => new PackingHeuristics(heuristicsConfig), [heuristicsConfig])
 
+  // Helper function to generate suggestions for a trip
+  const generateSuggestionsForTrip = (tripData: Trip): TripSuggestion[] => {
+    const suggestions: TripSuggestion[] = []
+    
+    // Generate additional item suggestions from smart-suggestions library
+    const smartSuggestions = generateSmartSuggestions(tripData)
+    
+    // Add quantity update suggestions based on heuristics
+    if (tripData.checklistItems) {
+      const originalItems = tripData.checklistItems
+      const updatedItems = heuristics.applyHeuristicsToItems(tripData, originalItems)
+      
+      originalItems.forEach((originalItem, index) => {
+        const updatedItem = updatedItems[index]
+        if (updatedItem && originalItem.quantity !== updatedItem.quantity) {
+          // Check if there's already a smart suggestion for this item
+          const hasSmartSuggestion = smartSuggestions.some(
+            s => s.type === 'update' && s.targetItemId === originalItem.id
+          )
+          
+          if (!hasSmartSuggestion) {
+            suggestions.push({
+              id: `suggestion-${Date.now()}-${Math.random()}`,
+              type: 'update',
+              targetItemId: updatedItem.id,
+              item: { ...updatedItem },
+              originalQuantity: originalItem.quantity,
+              reason: heuristics.getHeuristicExplanation(tripData, updatedItem),
+              category: updatedItem.category,
+              applied: false
+            })
+          }
+        }
+      })
+    }
+    
+    return [...smartSuggestions, ...suggestions]
+  }
+
   // Load active trip on mount or use prop trip
   useEffect(() => {
     if (propTrip) {
@@ -48,12 +88,26 @@ export function TripBasedGenerator({ masterList, onBackToLibrary, trip: propTrip
       if (propTrip.heuristicsConfig) {
         setHeuristicsConfig(propTrip.heuristicsConfig)
       }
+      
+      // Generate suggestions if it's smart mode and suggestions don't exist
+      if (propTrip.setupMode === 'smart' && (!propTrip.suggestions || propTrip.suggestions.length === 0)) {
+        const suggestions = generateSuggestionsForTrip(propTrip)
+        TripStorage.addSuggestions(propTrip.id, suggestions)
+        setTrip({ ...propTrip, suggestions })
+      }
     } else if (masterList) {
       const activeTrip = TripStorage.getActiveTrip()
       if (activeTrip && activeTrip.masterListId === masterList.id) {
         setTrip(activeTrip)
         if (activeTrip.heuristicsConfig) {
           setHeuristicsConfig(activeTrip.heuristicsConfig)
+        }
+        
+        // Generate suggestions if it's smart mode and suggestions don't exist
+        if (activeTrip.setupMode === 'smart' && (!activeTrip.suggestions || activeTrip.suggestions.length === 0)) {
+          const suggestions = generateSuggestionsForTrip(activeTrip)
+          TripStorage.addSuggestions(activeTrip.id, suggestions)
+          setTrip({ ...activeTrip, suggestions })
         }
       }
     }
@@ -131,61 +185,64 @@ export function TripBasedGenerator({ masterList, onBackToLibrary, trip: propTrip
     })
   }
 
-  const handleApplySuggestions = (suggestionIds: string[]) => {
+  const handleApplySuggestions = (suggestionsToApply: Array<TripSuggestion & { userQuantity?: number }>) => {
     if (!trip) return
     
-    TripStorage.applySuggestions(trip.id, suggestionIds)
+    TripStorage.applySuggestions(trip.id, suggestionsToApply)
     const updatedTrip = TripStorage.getTrip(trip.id)
     if (updatedTrip) {
       setTrip(updatedTrip)
     }
     
+    // Hide suggestions panel after applying
+    setShowSuggestions(false)
+    
     toast({
-      title: "Suggestions applied",
-      description: (
-        <div className="flex items-center gap-2">
-          <span>{suggestionIds.length} suggestions have been applied to your packing list</span>
-          <Button
-            variant="link"
-            size="sm"
-            className="p-0 h-auto"
-            onClick={() => {
-              // Scroll to packing list
-              const packingListElement = document.getElementById('packing-list')
-              packingListElement?.scrollIntoView({ behavior: 'smooth' })
-            }}
-          >
-            View updated packing list
-          </Button>
-        </div>
-      ),
+      title: "Suggestions applied ✓",
+      description: `${suggestionsToApply.length} suggestions have been applied to your packing list`,
       action: (
         <Button
-          variant="outline"
+          variant="link"
           size="sm"
+          className="p-0 h-auto"
           onClick={() => {
-            // Implement undo functionality
-            toast({
-              title: "Undo not yet implemented",
-              description: "This feature is coming soon"
-            })
+            // Scroll to packing list and highlight changed items
+            const packingListElement = document.getElementById('packing-list')
+            packingListElement?.scrollIntoView({ behavior: 'smooth' })
+            
+            // Add highlight effect to changed items
+            setTimeout(() => {
+              suggestionsToApply.forEach(suggestion => {
+                let elementId = ''
+                if (suggestion.type === 'update' && suggestion.targetItemId) {
+                  elementId = `item-${suggestion.targetItemId}`
+                } else if (suggestion.type === 'add' && suggestion.item) {
+                  // Find the newly added item by name
+                  const newItem = updatedTrip?.checklistItems.find(
+                    item => item.name === suggestion.item!.name
+                  )
+                  if (newItem) elementId = `item-${newItem.id}`
+                }
+                
+                if (elementId) {
+                  const element = document.getElementById(elementId)
+                  if (element) {
+                    element.classList.add('bg-green-50', 'transition-colors', 'duration-500')
+                    setTimeout(() => {
+                      element.classList.remove('bg-green-50')
+                    }, 3000)
+                  }
+                }
+              })
+            }, 500)
           }}
         >
-          Undo
+          View updated packing list
         </Button>
       )
     })
   }
 
-  const handleDismissSuggestion = (suggestionId: string) => {
-    if (!trip) return
-    
-    TripStorage.dismissSuggestion(trip.id, suggestionId)
-    const updatedTrip = TripStorage.getTrip(trip.id)
-    if (updatedTrip) {
-      setTrip(updatedTrip)
-    }
-  }
 
   const handleAddItem = () => {
     if (!trip || !newItemForm.name.trim()) return
@@ -507,8 +564,6 @@ export function TripBasedGenerator({ masterList, onBackToLibrary, trip: propTrip
         <SuggestionsPanel
           suggestions={trip.suggestions}
           onApplySuggestions={handleApplySuggestions}
-          onDismiss={() => setShowSuggestions(false)}
-          onDismissSuggestion={handleDismissSuggestion}
         />
       )}
 

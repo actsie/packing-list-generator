@@ -152,7 +152,11 @@ export default function HomePage() {
           {selectedMasterList ? (
             <TripBasedGenerator 
               masterList={selectedMasterList}
-              onBackToLibrary={() => setActiveTab('library')}
+              onBackToLibrary={() => {
+                setActiveTab('library')
+                setSelectedMasterList(null)
+                setPackingListItems([])
+              }}
             />
           ) : (
             <Card className="text-center py-12">
