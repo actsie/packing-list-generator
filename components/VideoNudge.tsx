@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 type NudgeState = "collapsed" | "open" | "hidden";
 
 export default function VideoNudge({
-  url = "https://youtu.be/pGNIEEcD3f8",
-  embedUrl = "https://www.youtube-nocookie.com/embed/pGNIEEcD3f8?rel=0&modestbranding=1&playsinline=1&autoplay=1",
+  url = "https://youtu.be/ql06ZfTCSLc",
+  embedUrl = "https://www.youtube-nocookie.com/embed/ql06ZfTCSLc?rel=0&modestbranding=1&playsinline=1&autoplay=1",
   storageKey = "video_nudge_state",
   label = "Watch build and demo video ✨",
 }: {
@@ -97,7 +97,7 @@ export default function VideoNudge({
             <div 
               className="absolute inset-0 bg-cover bg-center opacity-80 group-hover:opacity-90 transition-opacity"
               style={{
-                backgroundImage: 'url(https://img.youtube.com/vi/pGNIEEcD3f8/maxresdefault.jpg)'
+                backgroundImage: 'url(https://img.youtube.com/vi/ql06ZfTCSLc/maxresdefault.jpg)'
               }}
             />
 
