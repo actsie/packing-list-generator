@@ -189,58 +189,63 @@ export function TripBasedGenerator({ masterList, onBackToLibrary = () => {}, tri
     if (!trip) return
     
     TripStorage.applySuggestions(trip.id, suggestionsToApply)
-    const updatedTrip = TripStorage.getTrip(trip.id)
-    if (updatedTrip) {
-      setTrip(updatedTrip)
-    }
     
-    // Hide suggestions panel after applying
-    setShowSuggestions(false)
-    
-    toast({
-      title: "Suggestions applied ✓",
-      description: `${suggestionsToApply.length} suggestions have been applied to your packing list`,
-      action: (
-        <Button
-          variant="link"
-          size="sm"
-          className="p-0 h-auto"
-          onClick={() => {
-            // Scroll to packing list and highlight changed items
-            const packingListElement = document.getElementById('packing-list')
-            packingListElement?.scrollIntoView({ behavior: 'smooth' })
-            
-            // Add highlight effect to changed items
-            setTimeout(() => {
-              suggestionsToApply.forEach(suggestion => {
-                let elementId = ''
-                if (suggestion.type === 'update' && suggestion.targetItemId) {
-                  elementId = `item-${suggestion.targetItemId}`
-                } else if (suggestion.type === 'add' && suggestion.item) {
-                  // Find the newly added item by name
-                  const newItem = updatedTrip?.checklistItems.find(
-                    item => item.name === suggestion.item!.name
-                  )
-                  if (newItem) elementId = `item-${newItem.id}`
-                }
+    // Force a fresh retrieval and state update
+    setTimeout(() => {
+      const updatedTrip = TripStorage.getTrip(trip.id)
+      if (updatedTrip) {
+        // Force a new object to ensure React detects the change
+        setTrip({ ...updatedTrip })
+        
+        // Hide suggestions panel after applying
+        setShowSuggestions(false)
+        
+        toast({
+          title: "Suggestions applied ✓",
+          description: `${suggestionsToApply.length} suggestions have been applied to your packing list`,
+          action: (
+            <Button
+              variant="link"
+              size="sm"
+              className="p-0 h-auto"
+              onClick={() => {
+                // Scroll to packing list and highlight changed items
+                const packingListElement = document.getElementById('packing-list')
+                packingListElement?.scrollIntoView({ behavior: 'smooth' })
                 
-                if (elementId) {
-                  const element = document.getElementById(elementId)
-                  if (element) {
-                    element.classList.add('bg-green-50', 'transition-colors', 'duration-500')
-                    setTimeout(() => {
-                      element.classList.remove('bg-green-50')
-                    }, 3000)
-                  }
-                }
-              })
-            }, 500)
-          }}
-        >
-          View updated packing list
-        </Button>
-      )
-    })
+                // Add highlight effect to changed items
+                setTimeout(() => {
+                  suggestionsToApply.forEach(suggestion => {
+                    let elementId = ''
+                    if (suggestion.type === 'update' && suggestion.targetItemId) {
+                      elementId = `item-${suggestion.targetItemId}`
+                    } else if (suggestion.type === 'add' && suggestion.item) {
+                      // Find the newly added item by name
+                      const newItem = updatedTrip?.checklistItems.find(
+                        item => item.name === suggestion.item!.name
+                      )
+                      if (newItem) elementId = `item-${newItem.id}`
+                    }
+                    
+                    if (elementId) {
+                      const element = document.getElementById(elementId)
+                      if (element) {
+                        element.classList.add('bg-green-50', 'transition-colors', 'duration-500')
+                        setTimeout(() => {
+                          element.classList.remove('bg-green-50')
+                        }, 3000)
+                      }
+                    }
+                  })
+                }, 500)
+              }}
+            >
+              View updated packing list
+            </Button>
+          )
+        })
+      }
+    }, 100)
   }
 
 
@@ -259,7 +264,7 @@ export function TripBasedGenerator({ masterList, onBackToLibrary = () => {}, tri
     TripStorage.addItemToTrip(trip.id, newItem)
     const updatedTrip = TripStorage.getTrip(trip.id)
     if (updatedTrip) {
-      setTrip(updatedTrip)
+      setTrip({ ...updatedTrip })
     }
     
     // Reset form
@@ -283,7 +288,7 @@ export function TripBasedGenerator({ masterList, onBackToLibrary = () => {}, tri
     TripStorage.updateTripItem(trip.id, itemId, updates)
     const updatedTrip = TripStorage.getTrip(trip.id)
     if (updatedTrip) {
-      setTrip(updatedTrip)
+      setTrip({ ...updatedTrip })
     }
   }
 
@@ -293,7 +298,7 @@ export function TripBasedGenerator({ masterList, onBackToLibrary = () => {}, tri
     TripStorage.deleteTripItem(trip.id, itemId)
     const updatedTrip = TripStorage.getTrip(trip.id)
     if (updatedTrip) {
-      setTrip(updatedTrip)
+      setTrip({ ...updatedTrip })
     }
   }
 

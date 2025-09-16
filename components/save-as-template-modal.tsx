@@ -76,12 +76,13 @@ export function SaveAsTemplateModal({ open, onOpenChange, trip, onSave }: SaveAs
     }
 
     onSave(newMasterList)
-    onOpenChange(false)
     
-    toast({
-      title: "Template saved",
-      description: `"${name}" has been saved to your Master List Library`,
-    })
+    // Reset form
+    setName(`${trip.name} Template`)
+    setDescription('')
+    setCategory('')
+    
+    onOpenChange(false)
   }
 
   return (

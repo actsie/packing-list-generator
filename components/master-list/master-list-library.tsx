@@ -13,6 +13,7 @@ import { CreateMasterListDialog } from './create-master-list-dialog'
 import { EditMasterListDialog } from './edit-master-list-dialog'
 import { StartTripModal } from '../start-trip-modal'
 import { TripStorage } from '@/lib/trip-storage'
+import { MasterListStorage } from '@/lib/master-list-storage'
 import { Search, Plus, Filter, ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -24,7 +25,7 @@ interface MasterListLibraryProps {
 
 export function MasterListLibrary({ onSelectList, selectedListId }: MasterListLibraryProps) {
   const router = useRouter()
-  const [masterLists, setMasterLists] = useState<MasterList[]>(defaultMasterLists)
+  const [masterLists, setMasterLists] = useState<MasterList[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [editingList, setEditingList] = useState<MasterList | null>(null)
@@ -35,13 +36,51 @@ export function MasterListLibrary({ onSelectList, selectedListId }: MasterListLi
   const [activeTrip, setActiveTrip] = useState<Trip | null>(null)
   const [recentTrips, setRecentTrips] = useState<Trip[]>([])
 
+  const loadMasterLists = React.useCallback(() => {
+    // Load saved master lists from storage
+    const savedLists = MasterListStorage.getAllMasterLists()
+    
+    // Create a map to track which default lists exist in storage
+    const savedListIds = new Set(savedLists.map(list => list.id))
+    
+    // Filter out any default lists that might have been saved to avoid duplicates
+    const userCreatedLists = savedLists.filter(list => !defaultMasterLists.some(defaultList => defaultList.id === list.id))
+    
+    // Combine default lists with user-created lists
+    const allLists = [...defaultMasterLists, ...userCreatedLists]
+    
+    setMasterLists(allLists)
+  }, [])
+
+  // Load master lists from storage on mount
   React.useEffect(() => {
+    loadMasterLists()
+    
+    // Load active trip
     const trip = TripStorage.getActiveTrip()
     setActiveTrip(trip)
     
     const recent = TripStorage.getRecentTrips(3)
     setRecentTrips(recent)
-  }, [])
+  }, [loadMasterLists])
+  
+  // Reload master lists when the tab becomes visible (in case saved from another tab/component)
+  React.useEffect(() => {
+    const handleFocus = () => {
+      loadMasterLists()
+    }
+    
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        loadMasterLists()
+      }
+    })
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [loadMasterLists])
 
   const uniqueCategories = useMemo(() => {
     const cats = new Set(masterLists.map(list => list.category))
@@ -64,15 +103,18 @@ export function MasterListLibrary({ onSelectList, selectedListId }: MasterListLi
       createdAt: new Date(),
       updatedAt: new Date()
     }
+    MasterListStorage.saveMasterList(list)
     setMasterLists(prev => [...prev, list])
     setIsCreateDialogOpen(false)
   }
 
   const handleUpdateList = (updatedList: MasterList) => {
+    const updated = { ...updatedList, updatedAt: new Date() }
+    MasterListStorage.saveMasterList(updated)
     setMasterLists(prev => 
       prev.map(list => 
         list.id === updatedList.id 
-          ? { ...updatedList, updatedAt: new Date() }
+          ? updated
           : list
       )
     )
@@ -81,6 +123,7 @@ export function MasterListLibrary({ onSelectList, selectedListId }: MasterListLi
   }
 
   const handleDeleteList = (listId: string) => {
+    MasterListStorage.deleteMasterList(listId)
     setMasterLists(prev => prev.filter(list => list.id !== listId))
   }
 
@@ -99,6 +142,7 @@ export function MasterListLibrary({ onSelectList, selectedListId }: MasterListLi
       updatedAt: new Date(),
       items: list.items.map(item => ({ ...item, id: `${item.id}-copy-${Date.now()}` }))
     }
+    MasterListStorage.saveMasterList(duplicatedList)
     setMasterLists(prev => [...prev, duplicatedList])
   }
 

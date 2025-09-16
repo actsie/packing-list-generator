@@ -33,7 +33,6 @@ export default function HomePage() {
 
   const handleSelectMasterList = (list: MasterList) => {
     setSelectedMasterList(list)
-    setActiveTab('generator')
   }
 
   return (
@@ -48,7 +47,7 @@ export default function HomePage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-7 mb-6">
+        <TabsList className="grid w-full grid-cols-4 mb-6">
           <TabsTrigger value="library" className="flex items-center gap-2">
             <BookOpen className="h-4 w-4" />
             Master Lists
@@ -56,18 +55,6 @@ export default function HomePage() {
           <TabsTrigger value="always-packed-kits" className="flex items-center gap-2">
             <Package2 className="h-4 w-4" />
             Always-Packed Kits
-          </TabsTrigger>
-          <TabsTrigger value="generator" className="flex items-center gap-2">
-            <List className="h-4 w-4" />
-            Packing List
-          </TabsTrigger>
-          <TabsTrigger value="trip-based" className="flex items-center gap-2">
-            <Wand2 className="h-4 w-4" />
-            Per-Trip Heuristics
-          </TabsTrigger>
-          <TabsTrigger value="wizards" className="flex items-center gap-2">
-            <Scan className="h-4 w-4" />
-            Body-Scan & Day Viz
           </TabsTrigger>
           <TabsTrigger value="buy-there" className="flex items-center gap-2">
             <ShoppingBag className="h-4 w-4" />
@@ -90,108 +77,10 @@ export default function HomePage() {
           <AlwaysPackedKitsLibrary 
             onAddItemsToPackingList={(items) => {
               setPackingListItems(prev => [...prev, ...items])
-              setActiveTab('generator')
             }}
           />
         </TabsContent>
 
-        <TabsContent value="generator" className="space-y-6">
-          {selectedMasterList || packingListItems.length > 0 ? (
-            <PackingListGenerator 
-              masterList={selectedMasterList || {
-                id: 'custom-list',
-                name: 'Custom Packing List',
-                description: 'Items from Always-Packed Kits',
-                category: 'Custom',
-                items: packingListItems,
-                isTemplate: false,
-                createdAt: new Date(),
-                updatedAt: new Date()
-              }}
-              onBackToLibrary={() => {
-                setActiveTab('library')
-                if (!selectedMasterList) {
-                  setPackingListItems([])
-                }
-              }}
-              onAddItemsFromKit={(items) => {
-                setPackingListItems(prev => [...prev, ...items])
-              }}
-            />
-          ) : (
-            <Card className="text-center py-12">
-              <CardContent className="space-y-4">
-                <Package className="h-16 w-16 mx-auto text-muted-foreground" />
-                <div>
-                  <CardTitle className="text-xl mb-2">No Packing List Started</CardTitle>
-                  <CardDescription className="max-w-md mx-auto">
-                    Choose a master list from the library or add items from Always-Packed Kits to start your packing list.
-                  </CardDescription>
-                </div>
-                <div className="pt-4 flex flex-col sm:flex-row gap-2 items-center justify-center">
-                  <button
-                    onClick={() => setActiveTab('library')}
-                    className="text-primary hover:underline font-medium"
-                  >
-                    Browse Master Lists →
-                  </button>
-                  <span className="text-muted-foreground">or</span>
-                  <button
-                    onClick={() => setActiveTab('always-packed-kits')}
-                    className="text-primary hover:underline font-medium"
-                  >
-                    Browse Always-Packed Kits →
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="trip-based" className="space-y-6">
-          {selectedMasterList ? (
-            <TripBasedGenerator 
-              masterList={selectedMasterList}
-              onBackToLibrary={() => {
-                setActiveTab('library')
-                setSelectedMasterList(null)
-                setPackingListItems([])
-              }}
-            />
-          ) : (
-            <Card className="text-center py-12">
-              <CardContent className="space-y-4">
-                <Wand2 className="h-16 w-16 mx-auto text-muted-foreground" />
-                <div>
-                  <CardTitle className="text-xl mb-2">No Master List Selected</CardTitle>
-                  <CardDescription className="max-w-md mx-auto">
-                    Choose a master list from the library to start using Per-Trip Heuristics & Auto-Quantities.
-                  </CardDescription>
-                </div>
-                <div className="pt-4">
-                  <button
-                    onClick={() => setActiveTab('library')}
-                    className="text-primary hover:underline font-medium"
-                  >
-                    Browse Master List Library →
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="wizards" className="space-y-6">
-          <BodyScanDayWizard
-            masterList={selectedMasterList}
-            onBack={() => setActiveTab('library')}
-            onComplete={(results) => {
-              // Update packing list with optimized results
-              setPackingListItems(results.optimizedItems)
-              setActiveTab('generator')
-            }}
-          />
-        </TabsContent>
 
         <TabsContent value="buy-there" className="space-y-6">
           {selectedMasterList || packingListItems.length > 0 ? (
@@ -200,7 +89,7 @@ export default function HomePage() {
                 ...item,
                 packed: false
               })) || packingListItems}
-              onBackToPackingList={() => setActiveTab('generator')}
+              onBackToPackingList={() => setActiveTab('library')}
               onItemsUpdated={(items) => {
                 // Update packing list items with buy-there information
                 if (selectedMasterList) {
@@ -336,7 +225,7 @@ export default function HomePage() {
         </div>
 
         <div
-          className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-6 transition-all duration-300 ease-in-out ${
+          className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 transition-all duration-300 ease-in-out ${
             featuresExpanded
               ? 'opacity-100 max-h-[1000px]'
               : 'opacity-0 max-h-0 overflow-hidden'
@@ -366,41 +255,6 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="text-center">
-            <List className="h-8 w-8 mx-auto text-primary mb-2" />
-            <CardTitle className="text-lg">Smart Generation</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="text-center">
-              Generate customized packing lists based on your trip details and preferences.
-            </CardDescription>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="text-center">
-            <Wand2 className="h-8 w-8 mx-auto text-primary mb-2" />
-            <CardTitle className="text-lg">Per-Trip Heuristics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="text-center">
-              Auto-calculate quantities and get smart suggestions based on trip duration, activities, and destination.
-            </CardDescription>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="text-center">
-            <Scan className="h-8 w-8 mx-auto text-primary mb-2" />
-            <CardTitle className="text-lg">Body-Scan & Day Viz</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="text-center">
-              Scan your closet to optimize packing and visualize daily outfits for your entire trip.
-            </CardDescription>
-          </CardContent>
-        </Card>
 
         <Card>
           <CardHeader className="text-center">

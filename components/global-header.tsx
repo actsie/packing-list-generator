@@ -13,12 +13,12 @@ export function GlobalHeader() {
   if (pathname === '/history') return null
 
   return (
-    <div className="absolute top-4 right-4 z-40">
+    <div className="fixed top-20 right-4 z-50">
       <Button
         variant="ghost"
         size="sm"
         onClick={() => router.push('/history')}
-        className="flex items-center gap-2"
+        className="flex items-center gap-2 bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background/90"
       >
         <Clock className="h-4 w-4" />
         <span className="hidden sm:inline">History</span>
